@@ -1,4 +1,4 @@
-**/.json
-**/.s3db
-**/.csv
-**/.xlsx
+*.json
+*.s3db
+*.csv
+*.xlsx
