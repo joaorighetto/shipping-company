@@ -3,6 +3,22 @@ import re
 import sqlite3
 import csv
 import json
+import dicttoxml
+from lxml import etree
+
+
+def create_xml(file_name):
+    with open(file_name, 'r') as json_file:
+        obj = json.load(json_file)
+    xml = dicttoxml.dicttoxml(obj, attr_type=False, root='convoy', item_func=lambda x: 'vehicle')
+    file_name = re.sub(r'\.json$', '.xml', filename)
+    root = etree.fromstring(xml)
+    tree = etree.ElementTree(root)
+    tree.write(file_name)
+    if len(root) == 1:
+        print(f'1 vehicle was saved into {file_name}')
+    else:
+        print(f'{len(root)} vehicles were saved into {file_name}')
 
 
 def create_json(file_name, correct_df):
@@ -26,7 +42,10 @@ def create_database(file_name):
     # insert and count records added to table
     record_count = 0
     for line in buffer:
-        cursor.execute(f'INSERT INTO convoy VALUES({line[0]}, {line[1]}, {line[2]}, {line[3]})')
+        try:
+            cursor.execute(f'INSERT INTO convoy VALUES({line[0]}, {line[1]}, {line[2]}, {line[3]})')
+        except Exception:
+            cursor.execute(f'REPLACE INTO convoy VALUES({line[0]}, {line[1]}, {line[2]}, {line[3]})')
         record_count += 1
     conn.commit()
     conn.close()
@@ -101,6 +120,7 @@ if filename_input.endswith('.xlsx'):
     create_database(filename)
     filename = re.sub(r'\.s3db$', '.json', filename)
     create_json(filename, clean_df)
+    create_xml(filename)
 
 # handle .csv clean file
 elif filename_input.endswith('[CHECKED].csv'):
@@ -110,6 +130,7 @@ elif filename_input.endswith('[CHECKED].csv'):
     create_database(filename)
     filename = re.sub(r'\.s3db$', '.json', filename)
     create_json(filename, clean_df)
+    create_xml(filename)
 
 # handle .csv dirty file
 elif filename_input.endswith('.csv'):
@@ -118,13 +139,20 @@ elif filename_input.endswith('.csv'):
     create_database(filename)
     filename = re.sub(r'\.s3db$', '.json', filename)
     create_json(filename, clean_df)
+    create_xml(filename)
 
 # handle .s3db file
-else:
+elif filename_input.endswith('.s3db'):
     conx = sqlite3.connect(filename_input)
     clean_df = pd.read_sql_query("SELECT * FROM convoy", conx)
     filename = re.sub(r'\.s3db$', '.json', filename_input)
     create_json(filename, clean_df)
+    create_xml(filename)
+
+#handle .json file
+elif filename_input.endswith('.json'):
+    create_xml(filename_input)
+
 
 
 
